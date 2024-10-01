@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interpolation App</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+        }
+        .result {
+            margin-top: 20px;
+        }
+        .error {
+            margin-top: 20px;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Interpolation Methods</h1>
+        <form id="interpolation-form" class="mt-4">
+            <div class="form-group">
+                <label for="x_points">Enter x points (comma-separated):</label>
+                <input type="text" class="form-control" id="x_points" name="x_points" required>
+            </div>
+            <div class="form-group">
+                <label for="y_points">Enter y points (comma-separated):</label>
+                <input type="text" class="form-control" id="y_points" name="y_points" required>
+            </div>
+            <div class="form-group">
+                <label for="x_value">Enter the value of x for interpolation:</label>
+                <input type="text" class="form-control" id="x_value" name="x_value" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Calculate</button>
+        </form>
+
+        <div class="error" id="error"></div>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        function lagrangeInterpolation(xPoints, yPoints, x) {
+            let total = 0;
+            const n = xPoints.length;
+
+            for (let i = 0; i < n; i++) {
+                let term = yPoints[i];
+                for (let j = 0; j < n; j++) {
+                    if (j !== i) {
+                        term *= (x - xPoints[j]) / (xPoints[i] - xPoints[j]);
+                    }
+                }
+                total += term;
+            }
+            return total;
+        }
+
+        function newtonDividedDifference(xPoints, yPoints) {
+            const n = yPoints.length;
+            const coef = Array.from({ length: n }, () => Array(n).fill(0));
+            for (let i = 0; i < n; i++) {
+                coef[i][0] = yPoints[i];
+            }
+
+            for (let j = 1; j < n; j++) {
+                for (let i = 0; i < n - j; i++) {
+                    coef[i][j] = (coef[i + 1][j - 1] - coef[i][j - 1]) / (xPoints[i + j] - xPoints[i]);
+                }
+            }
+            return coef[0];
+        }
+
+        function newtonInterpolation(xPoints, coef, x) {
+            let result = coef[0];
+            let product = 1;
+
+            for (let i = 1; i < coef.length; i++) {
+                product *= (x - xPoints[i - 1]);
+                result += coef[i] * product;
+            }
+            return result;
+        }
+
+        function gregoryForwardDifference(xPoints, yPoints, x) {
+            const n = yPoints.length;
+            const diff = Array.from({ length: n }, () => Array(n).fill(0));
+            for (let i = 0; i < n; i++) {
+                diff[i][0] = yPoints[i];
+            }
+
+            for (let j = 1; j < n; j++) {
+                for (let i = 0; i < n - j; i++) {
+                    diff[i][j] = diff[i + 1][j - 1] - diff[i][j - 1];
+                }
+            }
+
+            const h = xPoints[1] - xPoints[0];
+            const p = (x - xPoints[0]) / h;
+            let result = diff[0][0];
+
+            for (let i = 1; i < n; i++) {
+                let term = diff[0][i];
+                for (let j = 0; j < i; j++) {
+                    term *= (p - j) / (i - j);
+                }
+                result += term;
+            }
+            return result;
+        }
+
+        document.getElementById('interpolation-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            document.getElementById('error').textContent = ''; // Clear previous errors
+
+            const xPoints = document.getElementById('x_points').value.split(',').map(Number);
+            const yPoints = document.getElementById('y_points').value.split(',').map(Number);
+            const xValue = Number(document.getElementById('x_value').value);
+
+            if (xPoints.length !== yPoints.length) {
+                document.getElementById('error').textContent = 'The number of x points must equal the number of y points.';
+                return;
+            }
+
+            // Calculate interpolated values
+            const lagrangeResult = lagrangeInterpolation(xPoints, yPoints, xValue);
+            const coef = newtonDividedDifference(xPoints, yPoints);
+            const newtonResult = newtonInterpolation(xPoints, coef, xValue);
+            const gregoryResult = gregoryForwardDifference(xPoints, yPoints, xValue);
+
+            // Display results
+            document.getElementById('result').innerHTML = `
+                <div class="alert alert-success">
+                    <h4 class="alert-heading">Results for x = ${xValue}</h4>
+                    <p><strong>Lagrange Interpolation:</strong> ${lagrangeResult}</p>
+                    <p><strong>Newton's Interpolation:</strong> ${newtonResult}</p>
+                    <p><strong>Gregory's Forward Difference:</strong> ${gregoryResult}</p>
+                </div>
+            `;
+        });
+    </script>
+</body>
+</html>
